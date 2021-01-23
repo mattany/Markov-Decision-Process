@@ -1,4 +1,5 @@
-from typing import List, NamedTuple
+import copy
+from typing import List, NamedTuple, Tuple
 import numpy as np
 
 
@@ -13,8 +14,11 @@ class Transition(NamedTuple):
     sink_id: int
     probability: float
 
+class Event(NamedTuple):
+    sign: str
+    probability: float
 
-class MDP(object):
+class Markov_Chain(object):
     def __init__(self, states: List[State], transitions: List[Transition]):
         self.state_amount = len(states)
         for i, state in enumerate(states):
@@ -30,7 +34,7 @@ class MDP(object):
         self.construct_vector()
 
     def construct_matrix(self):
-        self.transition_matrix = np.zeros([self.state_amount,self.state_amount], dtype=float)
+        self.transition_matrix = np.zeros([self.state_amount, self.state_amount], dtype=float)
         for t in self.transitions:
             assert 0 <= t.source_id < self.state_amount and 0 <= t.sink_id < self.state_amount
             self.transition_matrix[t.source_id, t.sink_id] = t.probability
@@ -56,7 +60,7 @@ class MDP(object):
                 src = s
             elif s.name == dest_state:
                 dest = s
-        assert(src and dest)
+        assert (src and dest)
         linear_equation = np.copy(self.transition_matrix)
         for i, row in enumerate(linear_equation):
             if i != dest.id:
@@ -67,14 +71,24 @@ class MDP(object):
         solution_vector = np.dot(inverse, b_vector)
         return solution_vector[src.id]
 
-
     def __repr__(self):
         out_str = f"After {self.steps} steps.\n"
         for i, prob in enumerate(self.state_vector):
             out_str += f"State:{self.states[i].name}, Probability: {prob}\n"
         return out_str
+
     def show_transition_matrix(self):
         print(self.transition_matrix)
 
 
-
+def state_generator(goal_event_sequence: str,  events: Tuple[Event]):
+    assert sum(e.probability for e in events) == 1
+    stack = [State("", 0, 1)]
+    ret_val = list()
+    i, id = 0, 1
+    while stack:
+        cur = stack.pop()
+        ret_val.append(cur)
+        for e in events:
+            if goal_event_sequence[i] == e.sign:
+                stack.append(State(goal_event_sequence[:i + 1], id, ))
